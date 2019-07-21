@@ -5,6 +5,7 @@ interface AppState {
   grid_size: number,
   grid: Array<Array<string | null>>,
   tiles: Array<string>,
+  selectedTile: number | null,
 }
 
 // Top-level App component. Maintains game state and renders sub-components.
@@ -21,6 +22,7 @@ class App extends React.Component<{}, AppState> {
       grid_size: 10,
       grid: grid,
       tiles: tiles,
+      selectedTile: null,
     };
 
     this.handleTileClick = this.handleTileClick.bind(this);
@@ -29,6 +31,7 @@ class App extends React.Component<{}, AppState> {
 
   handleTileClick(pos: number) {
     console.log("Tile " + this.state.tiles[pos] + " clicked.");
+    this.setState({...this.state, selectedTile: pos});
   }
 
   handleGridClick(x: number, y: number) {
@@ -40,7 +43,11 @@ class App extends React.Component<{}, AppState> {
       <div className="App">
         <Grid grid_values={this.state.grid} onClick={this.handleGridClick} />
         <br />
-        <TileRack tiles={this.state.tiles} onClick={this.handleTileClick} />
+        <TileRack
+          tiles={this.state.tiles}
+          onClick={this.handleTileClick}
+          selectedTile={this.state.selectedTile}
+        />
       </div>
     );
   }
@@ -115,12 +122,17 @@ function GridElement(props: GridElementProps) {
 interface TileRackProps {
   tiles: Array<string>,
   onClick: (pos: number) => void,
+  selectedTile: number | null,
 }
 
 // Render a rack of tiles that can be placed on the grid.
 function TileRack(props: TileRackProps) {
   const tile_row = props.tiles.map(
-    (letter, i) => <Tile letter={letter} onClick={() => props.onClick(i)} />
+    (letter, i) => <Tile
+      letter={letter}
+      onClick={() => props.onClick(i)}
+      selected={i === props.selectedTile}
+    />
   );
   return (
     <div className="tile-row">
@@ -129,11 +141,24 @@ function TileRack(props: TileRackProps) {
   );
 }
 
+interface TileProps {
+  letter: string,
+  onClick: () => void,
+  selected: boolean,
+}
+
 // Render a single tile in the rack.
-function Tile(props: {letter: string, onClick: () => void}) {
+function Tile(props: TileProps) {
+  let className: string;
+  if (props.selected) {
+    className = "selected-tile";
+  } else {
+    className = "grid-element";
+  }
+
   return (
     <button
-      className="grid-element"
+      className={className}
       onClick={props.onClick}
     >
       {props.letter}
