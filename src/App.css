@@ -1,5 +1,4 @@
 .App {
-  text-align: center;
 }
 
 .grid {
@@ -10,6 +9,7 @@
 .grid-row {
   display: flex;
   flex-direction: row;
+  justify-content: center;
 }
 
 .grid-element {
@@ -29,5 +29,11 @@
 
 .grid-element:focus {
 	outline: none;
+}
+
+.tile-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
 }
 

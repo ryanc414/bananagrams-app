@@ -3,10 +3,14 @@ import './App.css';
 
 const App: React.FC = () => {
   const size = 10;
+  const aCode = "A".charCodeAt(0);
+  const tiles = [...Array(21)].map((_, i) => String.fromCharCode(aCode + i));
 
   return (
     <div className="App">
       <Grid width={size} height={size} />
+      <br />
+      <TileRack tiles={tiles} />
     </div>
   );
 }
@@ -43,9 +47,29 @@ function GridRow(props: {y: number, width: number}) {
 function GridElement(props: {position: Array<number>}) {
   return (
     <button className="grid-element" onClick={() => console.log("click")}>
-      {props.position[0]}
+    </button>
+  );
+}
+
+function TileRack(props: {tiles: Array<string>}) {
+  const tile_row = props.tiles.map((letter) => <Tile letter={letter} />);
+  return (
+    <div className="tile-row">
+      {tile_row}
+    </div>
+  );
+}
+
+function Tile(props: {letter: string}) {
+  return (
+    <button
+      className="grid-element"
+      onClick={() => console.log("clicked " + props.letter)}
+    >
+      {props.letter}
     </button>
   );
 }
 
 export default App;
+
