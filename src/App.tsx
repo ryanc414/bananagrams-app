@@ -1,11 +1,25 @@
 import React from 'react';
 import './App.css';
 
+class PlacedTile {
+  public value: string;
+  public position: Array<number>;
+  public visited: boolean;
+
+  constructor(value: string, position: Array<number>) {
+    this.value = value;
+    this.position = position;
+    this.visited = false;
+  }
+}
+
 interface AppState {
   grid_size: number,
-  grid: Array<Array<string | null>>,
-  tiles: Array<string>,
+  grid: Array<Array<PlacedTile | null>>,
+  rackTiles: Array<string>,
+  placedTiles: Array<PlacedTile>,
   selectedTile: number | null,
+  gameWon: boolean,
 }
 
 // Top-level App component. Maintains game state and renders sub-components.
@@ -21,8 +35,10 @@ class App extends React.Component<{}, AppState> {
     this.state = {
       grid_size: 10,
       grid: grid,
-      tiles: tiles,
+      rackTiles: tiles,
+      placedTiles: new Array(),
       selectedTile: null,
+      gameWon: false,
     };
 
     this.handleTileClick = this.handleTileClick.bind(this);
@@ -30,7 +46,7 @@ class App extends React.Component<{}, AppState> {
   }
 
   handleTileClick(pos: number) {
-    console.log("Tile " + this.state.tiles[pos] + " clicked.");
+    console.log("Tile " + this.state.rackTiles[pos] + " clicked.");
     this.setState({...this.state, selectedTile: pos});
   }
 
@@ -42,7 +58,10 @@ class App extends React.Component<{}, AppState> {
     }
 
     const tile_index: number = this.state.selectedTile;
-    const grid = this.insertTile(x, y, this.state.tiles[tile_index]);
+    const placedTile = new PlacedTile(this.state.rackTiles[tile_index],
+                                      [x, y]);
+    const grid = this.insertTile(x, y, placedTile);
+    const placedTiles = [...this.state.placedTiles, placedTile];
     const tiles = this.updateTiles(this.state.grid[y][x], tile_index);
 
     // this.validateBoard TODO
@@ -50,12 +69,14 @@ class App extends React.Component<{}, AppState> {
     this.setState({
       ...this.state,
       grid: grid,
-      tiles: tiles,
+      rackTiles: tiles,
       selectedTile: null,
     });
   }
 
-  insertTile(x: number, y: number, tile: string) {
+  insertTile(x: number,
+             y: number,
+             tile: PlacedTile): Array<Array<PlacedTile | null>> {
     return [...this.state.grid].map(
       (row, i) => row.map(
         (el, j) => {
@@ -69,16 +90,37 @@ class App extends React.Component<{}, AppState> {
     );
   }
 
-  updateTiles(replaceTile: string | null, removedIndex: number) {
-    let tiles = this.state.tiles.filter(
+  updateTiles(replaceTile: PlacedTile | null,
+              removedIndex: number): Array<string> {
+    let tiles = this.state.rackTiles.filter(
       (_, i) => i !== removedIndex
     );
 
     if (replaceTile !== null) {
-      tiles.push(replaceTile);
+      tiles.push(replaceTile.value);
     }
 
     return tiles;
+  }
+
+  // A board is valid when all tiles are connected and all words formed are
+  // valid.
+  validateBoard(grid: Array<Array<PlacedTile | null>>,
+                placedTiles: Array<PlacedTile>): boolean {
+    return (
+      this.allTilesConnected(grid, placedTiles) && this.allWordsValid(grid)
+    );
+  }
+
+  allTilesConnected(grid: Array<Array<PlacedTile | null>>,
+                    placedTiles: Array<PlacedTile>): boolean {
+    startTile = placedTiles[0];
+    this.traverseRecur(startTile);
+    return this.checkMarks();
+  }
+
+  allWordsValid(grid: Array<Array<PlacedTile | null>>): boolean {
+
   }
 
   render() {
@@ -87,7 +129,7 @@ class App extends React.Component<{}, AppState> {
         <Grid grid_values={this.state.grid} onClick={this.handleGridClick} />
         <br />
         <TileRack
-          tiles={this.state.tiles}
+          tiles={this.state.rackTiles}
           onClick={this.handleTileClick}
           selectedTile={this.state.selectedTile}
         />
