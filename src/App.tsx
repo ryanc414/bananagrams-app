@@ -15,8 +15,8 @@ class App extends React.Component<{}, AppState> {
     const grid_size = 10;
     const aCode = "A".charCodeAt(0);
 
-    let grid = new Array(grid_size).fill(new Array(grid_size).fill(null));
-    let tiles = [...Array(21)].map((_, i) => String.fromCharCode(aCode + i));
+    const grid = new Array(grid_size).fill(new Array(grid_size).fill(null));
+    const tiles = [...Array(21)].map((_, i) => String.fromCharCode(aCode + i));
 
     this.state = {
       grid_size: 10,
@@ -36,6 +36,49 @@ class App extends React.Component<{}, AppState> {
 
   handleGridClick(x: number, y: number) {
     console.log("Grid clicked at (", + x + ", " + y + ").");
+
+    if (this.state.selectedTile === null) {
+      return;
+    }
+
+    const tile_index: number = this.state.selectedTile;
+    const grid = this.insertTile(x, y, this.state.tiles[tile_index]);
+    const tiles = this.updateTiles(this.state.grid[y][x], tile_index);
+
+    // this.validateBoard TODO
+
+    this.setState({
+      ...this.state,
+      grid: grid,
+      tiles: tiles,
+      selectedTile: null,
+    });
+  }
+
+  insertTile(x: number, y: number, tile: string) {
+    return [...this.state.grid].map(
+      (row, i) => row.map(
+        (el, j) => {
+          if ((i === y) && (j === x)) {
+            return tile;
+          } else {
+            return this.state.grid[i][j];
+          }
+        }
+      )
+    );
+  }
+
+  updateTiles(replaceTile: string | null, removedIndex: number) {
+    let tiles = this.state.tiles.filter(
+      (_, i) => i !== removedIndex
+    );
+
+    if (replaceTile !== null) {
+      tiles.push(replaceTile);
+    }
+
+    return tiles;
   }
 
   render() {
