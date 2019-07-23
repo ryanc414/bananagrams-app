@@ -27,16 +27,19 @@ class App extends React.Component<{}, AppState> {
   constructor(props: {}) {
     super(props);
     const grid_size = 10;
+    const num_tiles = 10;
     const aCode = "A".charCodeAt(0);
 
     const grid = new Array(grid_size).fill(new Array(grid_size).fill(null));
-    const tiles = [...Array(21)].map((_, i) => String.fromCharCode(aCode + i));
+    const tiles = [...Array(num_tiles)].map(
+      (_, i) => String.fromCharCode(aCode + i)
+    );
 
     this.state = {
       grid_size: 10,
       grid: grid,
       rackTiles: tiles,
-      placedTiles: new Array(),
+      placedTiles: [],
       selectedTile: null,
       gameWon: false,
     };
@@ -64,13 +67,20 @@ class App extends React.Component<{}, AppState> {
     const placedTiles = [...this.state.placedTiles, placedTile];
     const tiles = this.updateTiles(this.state.grid[y][x], tile_index);
 
-    // this.validateBoard TODO
+    let gameWon: boolean;
+    if (tiles.length === 0) {
+      gameWon = this.validateBoard(grid, placedTiles);
+    } else {
+      gameWon = false;
+    }
 
     this.setState({
-      ...this.state,
+      grid_size: this.state.grid_size,
       grid: grid,
       rackTiles: tiles,
+      placedTiles: placedTiles,
       selectedTile: null,
+      gameWon: gameWon,
     });
   }
 
@@ -114,16 +124,78 @@ class App extends React.Component<{}, AppState> {
 
   allTilesConnected(grid: Array<Array<PlacedTile | null>>,
                     placedTiles: Array<PlacedTile>): boolean {
-    startTile = placedTiles[0];
-    this.traverseRecur(startTile);
-    return this.checkMarks();
+    this.clearMarks(placedTiles);
+    const startTile = placedTiles[0];
+    this.traverseRecur(startTile, grid);
+    return this.checkMarks(placedTiles);
+  }
+
+  clearMarks(placedTiles: Array<PlacedTile>): void {
+    placedTiles.forEach((tile) => tile.visited = false);
+  }
+
+  traverseRecur(currTile: PlacedTile,
+                grid: Array<Array<PlacedTile | null>>): void {
+    if (currTile.visited) {
+      throw new Error("Tile already visited");
+    }
+
+    currTile.visited = true;
+
+    this.neighbours(currTile, grid).forEach((tile) => {
+      if (!tile.visited) {
+        this.traverseRecur(tile, grid);
+      }
+    });
+  }
+
+  neighbours(tile: PlacedTile,
+             grid: Array<Array<PlacedTile | null>>): Array<PlacedTile> {
+    const x = tile.position[0];
+    const y = tile.position[1];
+
+    const height = grid.length;
+    const width = grid[0].length;
+
+    const neighbourIndices = [[x + 1, y],  // right
+                              [x, y + 1],  // up
+                              [x - 1, y],  // left
+                              [x, y - 1]]  // down
+
+    const neighbourTiles = neighbourIndices.filter(
+      (pos) => (
+        (pos[0] >= 0) &&
+        (pos[0] < width) &&
+        (pos[1] >= 0) &&
+        (pos[1] < height)
+      )
+    ).map(
+      (pos) => grid[pos[1]][pos[0]]
+    );
+
+    return neighbourTiles.filter((tile): tile is PlacedTile => tile !== null);
+  }
+
+  checkMarks(placedTiles: Array<PlacedTile>): boolean {
+    return placedTiles.every((tile) => tile.visited);
   }
 
   allWordsValid(grid: Array<Array<PlacedTile | null>>): boolean {
-
+    return true;
   }
 
   render() {
+    let winMsg;
+    if (this.state.gameWon) {
+      winMsg = (
+        <>
+          <p>All tiles connected</p>
+        </>
+      );
+    } else {
+      winMsg = null;
+    }
+
     return (
       <div className="App">
         <Grid grid_values={this.state.grid} onClick={this.handleGridClick} />
@@ -133,13 +205,14 @@ class App extends React.Component<{}, AppState> {
           onClick={this.handleTileClick}
           selectedTile={this.state.selectedTile}
         />
+        {winMsg}
       </div>
     );
   }
 }
 
 interface GridProps {
-  grid_values: Array<Array<string | null>>,
+  grid_values: Array<Array<PlacedTile | null>>,
   onClick: (x: number, y: number) => void,
 }
 
@@ -161,15 +234,15 @@ function Grid(props: GridProps) {
 }
 
 interface GridRowProps {
-  row_values: Array<string | null>,
+  row_values: Array<PlacedTile | null>,
   onClick: (x: number) => void,
 }
 
 // Single row of letters within the Grid.
 function GridRow(props: GridRowProps) {
   const grid_row = props.row_values.map(
-    (value, i) => <GridElement
-      value={value}
+    (tile, i) => <GridElement
+      tile={tile}
       onClick={() => props.onClick(i)}
       key={i}
     />
@@ -183,7 +256,7 @@ function GridRow(props: GridRowProps) {
 }
 
 interface GridElementProps {
-  value: string | null,
+  tile: PlacedTile | null,
   onClick: () => void,
 }
 
@@ -191,10 +264,10 @@ interface GridElementProps {
 // tile is placed, an empty space has a null value.
 function GridElement(props: GridElementProps) {
   let value: string;
-  if (props.value === null) {
+  if (props.tile === null) {
     value = "";
   } else {
-    value = props.value;
+    value = props.tile.value;
   }
 
   return (
