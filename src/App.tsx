@@ -1,5 +1,6 @@
 import React from 'react';
 import './App.css';
+import dictionary from './dictionary.json';
 
 class PlacedTile {
   public value: string;
@@ -14,34 +15,32 @@ class PlacedTile {
 }
 
 interface AppState {
-  grid_size: number,
+  gridSize: number,
   grid: Array<Array<PlacedTile | null>>,
   rackTiles: Array<string>,
   placedTiles: Array<PlacedTile>,
   selectedTile: number | null,
   gameWon: boolean,
+  dictionary: Set<string>;
 }
 
 // Top-level App component. Maintains game state and renders sub-components.
 class App extends React.Component<{}, AppState> {
   constructor(props: {}) {
     super(props);
-    const grid_size = 10;
-    const num_tiles = 10;
-    const aCode = "A".charCodeAt(0);
+    const gridSize = 10;
 
-    const grid = new Array(grid_size).fill(new Array(grid_size).fill(null));
-    const tiles = [...Array(num_tiles)].map(
-      (_, i) => String.fromCharCode(aCode + i)
-    );
+    const grid = new Array(gridSize).fill(new Array(gridSize).fill(null));
+    const tiles = ["H", "E", "L", "L", "O", "W", "R", "L", "D"];
 
     this.state = {
-      grid_size: 10,
+      gridSize: 10,
       grid: grid,
       rackTiles: tiles,
       placedTiles: [],
       selectedTile: null,
       gameWon: false,
+      dictionary: new Set(dictionary.map((word) => word.toUpperCase())),
     };
 
     this.handleTileClick = this.handleTileClick.bind(this);
@@ -75,12 +74,13 @@ class App extends React.Component<{}, AppState> {
     }
 
     this.setState({
-      grid_size: this.state.grid_size,
+      gridSize: this.state.gridSize,
       grid: grid,
       rackTiles: tiles,
       placedTiles: placedTiles,
       selectedTile: null,
       gameWon: gameWon,
+      dictionary: this.state.dictionary,
     });
   }
 
@@ -127,7 +127,11 @@ class App extends React.Component<{}, AppState> {
     this.clearMarks(placedTiles);
     const startTile = placedTiles[0];
     this.traverseRecur(startTile, grid);
-    return this.checkMarks(placedTiles);
+    const res = this.checkMarks(placedTiles);
+    if (!res) {
+      console.log("Tiles aren't connected");
+    }
+    return res;
   }
 
   clearMarks(placedTiles: Array<PlacedTile>): void {
@@ -181,7 +185,64 @@ class App extends React.Component<{}, AppState> {
   }
 
   allWordsValid(grid: Array<Array<PlacedTile | null>>): boolean {
+    for (let i = 0; i < this.state.gridSize; i++) {
+      if (!this.validateRow(grid, i)) {
+        console.log("row " + i + " is not valid");
+        return false;
+      }
+      if (!this.validateCol(grid, i)) {
+        console.log("col " + i + " is not valid");
+        return false;
+      }
+    }
+
+    console.log("All words valid.");
     return true;
+  }
+
+  validateRow(grid: Array<Array<PlacedTile | null>>, row_ix: number): boolean {
+    const row = grid[row_ix];
+    const words = this.splitWords(row);
+
+    const res = words.every((word) => this.state.dictionary.has(word));
+    if (!res) {
+      console.log("Row not valid: " + words);
+    }
+
+    return res;
+  }
+
+  validateCol(grid: Array<Array<PlacedTile | null>>, col_ix: number): boolean {
+    const col = grid.map((row) => row[col_ix]);
+    const words = this.splitWords(col);
+
+    const res = words.every((word) => this.state.dictionary.has(word));
+    if (!res) {
+      console.log("Row not valid: " + words);
+    }
+
+    return res;
+  }
+
+  splitWords(tileSeq: Array<PlacedTile | null>): Array<string> {
+    let words: Array<string> = [];
+    let currWord: Array<string> | null = null;
+
+    tileSeq.forEach((tile) => {
+      if ((currWord === null) && (tile !== null)) {
+        currWord = [tile.value];
+      } else if (currWord !== null) {
+        if (tile !== null) {
+          currWord.push(tile.value);
+        } else {
+          words.push(currWord.join(''));
+          currWord = null;
+        }
+      }
+    });
+
+    // Ignore any "words" that are only 1 character long.
+    return words.filter((word) => word.length > 1);
   }
 
   render() {
